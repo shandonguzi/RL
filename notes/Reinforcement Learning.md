@@ -1314,3 +1314,195 @@ $$
 
 - DPG：$q(s, a, w) = \phi^T(s, a) w$
 - Deep DPG：神经网络拟合 $q(s,a,w)$
+
+---
+
+
+
+
+
+# Trusted Region Policy Optimization（TRPO）
+
+### Trusted Region
+
+优化问题 $\theta^* = \arg\max\limits_{\theta}J(\theta)$，设定临域 $\mathcal{N}(\boldsymbol{\theta}_{\mathrm{old}}) = \left\{ \boldsymbol{\theta} \;\middle|\; \left\| \boldsymbol{\theta} - \boldsymbol{\theta}_{\mathrm{old}} \right\|_2 \leq \Delta \right\}$，如果在 $\mathcal{N}(\boldsymbol{\theta}_{\mathrm{old}})$ 内 $L(\theta|\theta_{old})$（不一定要完全相同，在置信域内大致相同就可）可以很好的拟合 $J(\theta)$，那么 $\mathcal{N}(\boldsymbol{\theta}_{\mathrm{old}})$ 就是 trusted region。算法步骤
+
+- Approximation：给定 $\theta_{old}$，构建在 $\mathcal{N}(\boldsymbol{\theta}_{\mathrm{old}})$ 内能很好地近似 $J(\theta)$ 的 $L(\theta|\theta_{old})$
+- Maximization：$\theta^{new} = \arg\max\limits_{\theta \in \mathcal{N}(\boldsymbol{\theta}_{\mathrm{old}})}L(\theta|\theta_{old})$
+
+前置知识
+$$
+\begin{align*}
+V_{\pi}(S) &= \mathbb{E}_{A \sim \pi}\left[ Q_{\pi}(s, A) \right] \\
+&= \sum_{a} \pi(a \mid s; \boldsymbol{\theta}) \cdot Q_{\pi}(s, a) \\
+&= \sum_{a} \pi(a \mid s; \boldsymbol{\theta}_{\mathrm{old}}) \cdot \frac{\pi(a \mid s; \boldsymbol{\theta})}{\pi(a \mid s; \boldsymbol{\theta}_{\mathrm{old}})} \cdot Q_{\pi}(s, a) \\
+&= \mathbb{E}_{A \sim \pi(\cdot \mid s; \boldsymbol{\theta}_{\mathrm{old}})} \left[ \frac{\pi(A \mid s; \boldsymbol{\theta})}{\pi(A \mid s; \boldsymbol{\theta}_{\mathrm{old}})} \cdot Q_{\pi}(s, A) \right]
+\end{align*}
+$$
+
+$$
+\begin{align*}
+J(\boldsymbol{\theta}) &= \mathbb{E}_{S} \left[ V_{\pi}(S) \right] \\
+&= \textcolor{red}{
+\mathbb{E}_{S} \left[\, \mathbb{E}_{A} \left[ \frac{\pi(A \mid S; \boldsymbol{\theta})}{\pi(A \mid S; \boldsymbol{\theta}_{\mathrm{old}})} \cdot Q_{\pi}(S, A) \right] \right]
+}
+\end{align*}
+$$
+
+### TRPO
+
+- 相比策略梯度算法，更鲁棒，在置信域内逐步更新
+- sample efficient，观测到同样数量的策略奖励，TRPO 能训练更好的策略网络
+
+##### Step 1：Approximation
+
+$$
+\begin{align*}
+L(\boldsymbol{\theta} \mid \boldsymbol{\theta}_{\mathrm{old}}) 
+= \frac{1}{n} \sum_{i=1}^{n} 
+\frac{\pi(a_i \mid s_i; \boldsymbol{\theta})}
+     {\pi(a_i \mid s_i; \boldsymbol{\theta}_{\mathrm{old}})}
+\,\cdot\, Q_{\pi}(s_i, a_i).
+\end{align*}
+$$
+
+$$
+\begin{align*}
+\tilde{L}(\boldsymbol{\theta} \mid \boldsymbol{\theta}_{\mathrm{old}})
+&= \frac{1}{n} \sum_{i=1}^{n}
+\frac{\pi(a_i \mid s_i; \boldsymbol{\theta})}
+     {\pi(a_i \mid s_i; \boldsymbol{\theta}_{\mathrm{old}})}
+\,\cdot\, \textcolor{blue}{u_i} \\
+\textcolor{blue}{u_i} &= \textcolor{blue}{r_i} 
++ \gamma \cdot \textcolor{blue}{r_{i+1}}
++ \gamma^2 \cdot \textcolor{blue}{r_{i+2}}
++ \cdots
++ \gamma^{n-i} \cdot \textcolor{blue}{r_n}
+\end{align*}
+$$
+
+##### Step 2：Maximization
+
+$$
+\begin{align*}
+\boldsymbol{\theta}_{\mathrm{new}}
+\leftarrow \arg\max_{\boldsymbol{\theta}}\, \tilde{L}(\boldsymbol{\theta} \mid \boldsymbol{\theta}_{\mathrm{old}})\,;
+\quad \text{s.t. } \boldsymbol{\theta} \in \mathcal{N}(\boldsymbol{\theta}_{\mathrm{old}})
+\end{align*}
+$$
+
+$$
+\begin{align*}
+\text{Option 1:} \quad & \left\| \boldsymbol{\theta} - \boldsymbol{\theta}_{\mathrm{old}} \right\| < \Delta. \\[1em]
+\text{Option 2:} \quad & \frac{1}{n} \sum_{i=1}^{n} \mathrm{KL}\Big[\, \pi(\cdot \mid s_i; \boldsymbol{\theta}_{\mathrm{old}}) \;\Big\|\, \pi(\cdot \mid s_i; \boldsymbol{\theta})\, \Big] < \Delta.
+\end{align*}
+$$
+
+---
+
+# Proximal Policy Optimization（PPO）
+
+### TRPO
+
+$$
+\begin{align*}
+\arg\max_{\theta'}
+\;\;
+\mathbb{E}_{s \sim v_{\theta},\, a \sim \pi_{\theta}(\cdot \mid s)}
+\left[
+\frac{\pi_{\theta'}(a, s)}{\pi_{\theta}(a, s)}
+\cdot
+A_{\pi_{\theta}}(s, a)
+\right]
+\qquad
+\text{s.t.} \;\;
+D_{KL} \big( \pi_{\theta}(\cdot \mid s) \;\big\|\, \pi_{\theta'}(\cdot \mid s) \big)
+\end{align*}
+$$
+
+$$
+\begin{align*}
+A_{\pi_{\theta}}(s, a) = Q_{\pi_{\theta}}(s_t, a_t) - V_{\pi_{\theta}}(s_t)
+\end{align*}
+$$
+
+### PPO-penalty
+
+$$
+\begin{align*}
+&\arg\max_{\theta'}
+\;
+\mathbb{E}_{s \sim v_{\theta}}\,
+\mathbb{E}_{a \sim \pi_{\theta}(\cdot \mid s)}
+\left[
+\frac{\pi_{\theta'}(a \mid s)}{\pi_{\theta}(a \mid s)}\, \hat{A}_{\pi_{\theta}}(s, a)
+- \beta D_{KL} \big( \pi_{\theta}(\cdot \mid s) \,\big\|\, \pi_{\theta'}(\cdot \mid s) \big)
+\right]
+\\[1.5em]
+&
+\begin{cases}
+\beta \gets \beta / 2 & \text{if } D_{KL} < \delta / 1.5 \\
+\beta \gets \beta \times 2 & \text{if } D_{KL} > \delta \times 1.5
+\end{cases}
+\end{align*}
+$$
+
+### PPO-clip
+
+$$
+\begin{align*}
+\arg\max_{\theta'}
+\;
+\mathbb{E}_{s \sim v_{\theta}}\,
+\mathbb{E}_{a \sim \pi_{\theta}(\cdot \mid s)}
+\left[
+\min \left(
+    \frac{\pi_{\theta'}(a \mid s)}{\pi_{\theta}(a \mid s)} \, \hat{A}_{\pi_{\theta}}(s, a),\;
+    \operatorname{clip}\left(
+        \frac{\pi_{\theta'}(a \mid s)}{\pi_{\theta}(a \mid s)},
+        1-\epsilon,\, 1+\epsilon
+    \right) \hat{A}_{\pi_{\theta}}(s, a)
+\right)
+\right]
+\end{align*}
+$$
+
+- PPO 解决了 TRPO 无法高效使用当代 NN 框架的问题，去掉了 KL Divergence 的计算
+
+---
+
+# Group Relative Policy Optimization（GRPO）
+
+$$
+\begin{align*}
+
+\hat{A}_{i, t} &= \frac{r_i - \mathrm{mean}(\mathbf{r})}{\mathrm{std}(\mathbf{r})} \\
+
+\mathbb{D}_{KL} \left( \pi_{\theta} \| \pi_{\mathrm{ref}} \right)
+&= \frac{\pi_{\mathrm{ref}}(o_i \mid q)}{\pi_{\theta}(o_i \mid q)}
+- \log \frac{\pi_{\mathrm{ref}}(o_i \mid q)}{\pi_{\theta}(o_i \mid q)}
+- 1 \\
+
+\mathcal{L}_{\mathrm{GRPO}}(\theta) &=
+\frac{1}{G} \sum_{i=1}^{G} \Bigg(
+    \min\left(
+        \frac{\pi_{\theta}(o_i \mid q)}{\pi_{\theta_{\mathrm{old}}}(o_i \mid q)} A_i,\;\;
+        \operatorname{clip}\left(
+            \frac{\pi_{\theta}(o_i \mid q)}{\pi_{\theta_{\mathrm{old}}}(o_i \mid q)},
+            1-\epsilon,\, 1+\epsilon
+        \right) A_i
+    \right)
+    - \beta \mathbb{D}_{\mathrm{KL}}\left( \pi_{\theta} \| \pi_{\mathrm{ref}} \right)
+\Bigg) \\
+ \\
+& \arg\min_{\theta}\mathcal{L}_{\mathrm{GRPO}}(\theta)
+
+\end{align*}
+$$
+
+<img src="/Users/nnxs/Desktop/学习/Reinforcement Learning/photo/GRPO.png" alt="image-20250807102036929" style="zoom:100%;" />
+
+- $\hat{A}_{i, t}$：摒弃 critic 网络，暴力采用平均值
+- $\mathbb{D}_{KL} \left( \pi_{\theta} \| \pi_{\mathrm{ref}} \right)$：当前 policy 和 ref policy 整体计算一并加入到 loss（ PPO是每个 token 位置加一个惩罚到 loss 计算），形式即 Schulman 近似值，保证 KL 始终为正数
+- $\frac{\pi_{\theta}(o_i \mid q)}{\pi_{\theta_{\mathrm{old}}}(o_i \mid q)} A_i$：即 $\pi_{no\ grad}$，同组答案 RL 会拿来 train N 次，每次 train 之前都会将上次 train 的 policy 输出的 $\pi_{old} / \pi_{no\ grad}$ 作为基准，形成了给 A 的加权效果，相比上次好的 adv 得到了放大
+- ref policy：原版冻住的 LLM，即 Deepseek R1，训练中一直不动的。$\pi_{old} / \pi_{no\ grad}$ 指上次 train 的 policy，训练中一直变化
