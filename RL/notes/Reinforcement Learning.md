@@ -1500,7 +1500,7 @@ $$
 \end{align*}
 $$
 
-<img src="/Users/nnxs/Desktop/学习/Reinforcement Learning/photo/GRPO.png" alt="image-20250807102036929" style="zoom:100%;" />
+<img src="../photo/GRPO.png" alt="image-20250807102036929" style="zoom:100%;" />
 
 - $\hat{A}_{i, t}$：摒弃 critic 网络，暴力采用平均值
 - $\mathbb{D}_{KL} \left( \pi_{\theta} \| \pi_{\mathrm{ref}} \right)$：当前 policy 和 ref policy 整体计算一并加入到 loss（ PPO是每个 token 位置加一个惩罚到 loss 计算），形式即 Schulman 近似值，保证 KL 始终为正数
