@@ -1,6 +1,6 @@
 # Deepseek V3/R1
 
-![img](/Users/nnxs/Desktop/学习/LLM notes/LLM/photo/deepseek.jpg)
+![img](../photo/deepseek.jpg)
 
 ### Multi-Head Latent Attention（MLA）
 
@@ -10,16 +10,16 @@ MHA ➡️ GQA ➡️ MLA
 - GQA：Q 独享，而 K、V 公用，num_heads = num_groups * N，每一个 group 内的 K、V 共享一个 W。KV cache 缓存下降 N 倍（一个 group 内有 N 个）
   - 缺点是同一 group 内的 K、V 相同，降低推理性能
 
-![img](/Users/nnxs/Desktop/学习/LLM notes/LLM/photo/deepseek GQA.jpg)
+![img](../photo/deepseek GQA.jpg)
 
 - MLA：对 K、V 的权重矩阵，保存低秩矩阵从而降低显存占用量
   - 考虑 RoPE 时，将 c 向量后面一部分直接保留，没有再和 Wk、Wv 相乘，这一部分的 c 和 q 能够保留原始的 RoPE 特性。简单来说就是，最终计算 q 和 k 的注意力时，q 和 k 都有一半的维度保留了原始的注意力做法，从而保留了 RoPE 的位置编码特性
 
-<img src="/Users/nnxs/Desktop/学习/LLM notes/LLM/photo/deepseek MLA.jpg" alt="img" style="zoom:100%;" />
+<img src="../photo/deepseek MLA.jpg" alt="img" style="zoom:100%;" />
 
 ### Share MOE
 
-![image-20250807163912083](/Users/nnxs/Desktop/学习/LLM notes/LLM/photo/deepseek MOE.png)
+![image-20250807163912083](../photo/deepseek MOE.png)
 
 - 专家头包括 **Share 专家** 和 **Router 专家**
 
